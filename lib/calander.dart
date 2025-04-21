@@ -150,6 +150,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final selectedEvents = _events.entries
+        .where((entry) => DateFormat('yyyy-MM-dd').format(entry.key) == DateFormat('yyyy-MM-dd').format(_selectedDate))
+        .expand((entry) => entry.value)
+        .toList();
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Calendrier des Tâches et Réunions'),
@@ -195,11 +200,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
           Expanded(
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
-                : (_events[_selectedDate] != null && _events[_selectedDate]!.isNotEmpty)
+                : (selectedEvents.isNotEmpty)
                     ? ListView(
-                        children: _events[_selectedDate]!
-                            .map((event) => _buildEventCard(event))
-                            .toList(),
+                        children: selectedEvents.map((event) => _buildEventCard(event)).toList(),
                       )
                     : const Center(
                         child: Text("Aucun événement pour cette date."),

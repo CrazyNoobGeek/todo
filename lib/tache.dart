@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:speech_to_text/speech_to_text.dart';
 
 class TacheScreen extends StatefulWidget {
   const TacheScreen({super.key});
@@ -13,6 +14,8 @@ class _TacheScreenState extends State<TacheScreen> {
   final TextEditingController _titreController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
   final TextEditingController _categorieController = TextEditingController();
+  final SpeechToText _speechToText = SpeechToText();
+  bool _isListening = false;
 
   TimeOfDay? _selectedStartTime;
   DateTime? _selectedStartDate;
@@ -73,9 +76,9 @@ class _TacheScreenState extends State<TacheScreen> {
         'description': _descriptionController.text,
         'categorie': _categorieController.text,
         'date_debut': DateFormat('yyyy-MM-dd').format(_selectedStartDate!),
-        'heure_debut': _selectedStartTime!.format(context),
+        'heure_debut': _selectedStartTime != null ? _selectedStartTime!.format(context) : '',
         'date_fin': DateFormat('yyyy-MM-dd').format(_selectedEndDate!),
-        'heure_fin': _selectedEndTime!.format(context),
+        'heure_fin': _selectedEndTime != null ? _selectedEndTime!.format(context) : '',
         'statut': 'En cours',
         'cree_le': Timestamp.now(),
       });
@@ -167,17 +170,47 @@ class _TacheScreenState extends State<TacheScreen> {
   }
 
   Widget _buildTextField(TextEditingController controller, String hint) {
-    return TextField(
-      controller: controller,
-      decoration: InputDecoration(
-        hintText: hint,
-        filled: true,
-        fillColor: Colors.grey.shade200,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: BorderSide.none,
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: TextField(
+            controller: controller,
+            minLines: hint == "Description" ? 2 : 1,
+            maxLines: hint == "Description" ? 5 : 1,
+            decoration: InputDecoration(
+              hintText: hint,
+              border: const OutlineInputBorder(),
+            ),
+          ),
         ),
-      ),
+        if (hint == "Description")
+          GestureDetector(
+            onLongPressStart: (_) async {
+              var available = await _speechToText.initialize();
+              if (available) {
+                setState(() => _isListening = true);
+                await _speechToText.listen(
+                  onResult: (result) {
+                    controller.text = result.recognizedWords;
+                    controller.selection = TextSelection.fromPosition(TextPosition(offset: controller.text.length));
+                  },
+                );
+              }
+            },
+            onLongPressEnd: (_) async {
+              await _speechToText.stop();
+              setState(() => _isListening = false);
+            },
+            child: Padding(
+              padding: const EdgeInsets.only(left: 8.0, top: 8.0),
+              child: Icon(
+                _isListening ? Icons.mic : Icons.mic_none,
+                color: _isListening ? Colors.red : Colors.grey,
+              ),
+            ),
+          ),
+      ],
     );
   }
 

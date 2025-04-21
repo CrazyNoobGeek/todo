@@ -34,9 +34,10 @@ class _ModifierScreenState extends State<ModifierScreen> {
     _heureFin = _parseTime(widget.task['heure_fin']);
   }
 
-  /// Convertir une chaîne d'heure Firestore (12h AM/PM) en objet TimeOfDay
+  /// Convertir une chaîne d'heure Firestore (24h 'HH:mm') en objet TimeOfDay
   TimeOfDay _parseTime(String timeStr) {
-    final DateFormat inputFormat = DateFormat('hh:mm a'); // Ex: "08:30 PM"
+    // Parse 24-hour time string 'HH:mm' (e.g., '19:30')
+    final DateFormat inputFormat = DateFormat('HH:mm');
     final DateTime dateTime = inputFormat.parse(timeStr);
     return TimeOfDay(hour: dateTime.hour, minute: dateTime.minute);
   }
@@ -87,9 +88,9 @@ class _ModifierScreenState extends State<ModifierScreen> {
         'description': _descriptionController.text,
         'categorie': _categorieController.text,
         'date_debut': DateFormat('yyyy-MM-dd').format(_dateDebut!),
-        'heure_debut': DateFormat('hh:mm a').format(DateTime(0, 0, 0, _heureDebut!.hour, _heureDebut!.minute)),
+        'heure_debut': DateFormat('HH:mm').format(DateTime(0, 0, 0, _heureDebut!.hour, _heureDebut!.minute)),
         'date_fin': DateFormat('yyyy-MM-dd').format(_dateFin!),
-        'heure_fin': DateFormat('hh:mm a').format(DateTime(0, 0, 0, _heureFin!.hour, _heureFin!.minute)),
+        'heure_fin': DateFormat('HH:mm').format(DateTime(0, 0, 0, _heureFin!.hour, _heureFin!.minute)),
       });
 
       ScaffoldMessenger.of(context).showSnackBar(

@@ -31,9 +31,10 @@ class _ModifierReunionScreenState extends State<ModifierReunionScreen> {
     _heureFin = _parseTime(widget.reunion['heure_fin']);
   }
 
-  /// Convertir une chaîne d'heure Firestore (12h AM/PM) en TimeOfDay
+  /// Convertir une chaîne d'heure Firestore (24h) en TimeOfDay
   TimeOfDay _parseTime(String timeStr) {
-    final DateFormat inputFormat = DateFormat('hh:mm a'); // Ex: "08:30 PM"
+    // Parse 24-hour time string 'HH:mm' (e.g., '19:30')
+    final DateFormat inputFormat = DateFormat('HH:mm');
     final DateTime dateTime = inputFormat.parse(timeStr);
     return TimeOfDay(hour: dateTime.hour, minute: dateTime.minute);
   }
@@ -80,8 +81,8 @@ class _ModifierReunionScreenState extends State<ModifierReunionScreen> {
         'description': _descriptionController.text,
         'lien_reunion': _lienReunionController.text,
         'date': DateFormat('yyyy-MM-dd').format(_date!),
-        'heure_debut': DateFormat('hh:mm a').format(DateTime(0, 0, 0, _heureDebut!.hour, _heureDebut!.minute)),
-        'heure_fin': DateFormat('hh:mm a').format(DateTime(0, 0, 0, _heureFin!.hour, _heureFin!.minute)),
+        'heure_debut': DateFormat('HH:mm').format(DateTime(0, 0, 0, _heureDebut!.hour, _heureDebut!.minute)),
+        'heure_fin': DateFormat('HH:mm').format(DateTime(0, 0, 0, _heureFin!.hour, _heureFin!.minute)),
       });
 
       ScaffoldMessenger.of(context).showSnackBar(

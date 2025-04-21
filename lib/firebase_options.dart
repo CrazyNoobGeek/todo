@@ -17,17 +17,29 @@ import 'package:flutter/foundation.dart'
 class DefaultFirebaseOptions {
   static FirebaseOptions get currentPlatform {
     if (kIsWeb) {
-      return web;
+      throw UnsupportedError(
+        'DefaultFirebaseOptions have not been configured for web - '
+        'you can reconfigure this by running the FlutterFire CLI again.',
+      );
     }
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
         return android;
       case TargetPlatform.iOS:
-        return ios;
+        throw UnsupportedError(
+          'DefaultFirebaseOptions have not been configured for ios - '
+          'you can reconfigure this by running the FlutterFire CLI again.',
+        );
       case TargetPlatform.macOS:
-        return macos;
+        throw UnsupportedError(
+          'DefaultFirebaseOptions have not been configured for macos - '
+          'you can reconfigure this by running the FlutterFire CLI again.',
+        );
       case TargetPlatform.windows:
-        return windows;
+        throw UnsupportedError(
+          'DefaultFirebaseOptions have not been configured for windows - '
+          'you can reconfigure this by running the FlutterFire CLI again.',
+        );
       case TargetPlatform.linux:
         throw UnsupportedError(
           'DefaultFirebaseOptions have not been configured for linux - '
@@ -40,49 +52,11 @@ class DefaultFirebaseOptions {
     }
   }
 
-  static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyC1P6YjAedTrQqpKBBgGtBC5t-nWQdPHcU',
-    appId: '1:413028764414:web:5c09ee750933c83c0673af',
-    messagingSenderId: '413028764414',
-    projectId: 'todoo-6ed91',
-    authDomain: 'todoo-6ed91.firebaseapp.com',
-    storageBucket: 'todoo-6ed91.firebasestorage.app',
-    measurementId: 'G-VB8N39188Q',
-  );
-
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyDLqwXcKa7FT_mJHGG80v9-zkJQm9tk4OA',
-    appId: '1:413028764414:android:d359b2f6d65f3f250673af',
-    messagingSenderId: '413028764414',
-    projectId: 'todoo-6ed91',
-    storageBucket: 'todoo-6ed91.firebasestorage.app',
-  );
-
-  static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyDPMyAFSh1Z4V9w-ShRkyWoHsCdYn7FkI4',
-    appId: '1:413028764414:ios:47375f1f92be8b1c0673af',
-    messagingSenderId: '413028764414',
-    projectId: 'todoo-6ed91',
-    storageBucket: 'todoo-6ed91.firebasestorage.app',
-    iosBundleId: 'com.example.todo',
-  );
-
-  static const FirebaseOptions macos = FirebaseOptions(
-    apiKey: 'AIzaSyDPMyAFSh1Z4V9w-ShRkyWoHsCdYn7FkI4',
-    appId: '1:413028764414:ios:47375f1f92be8b1c0673af',
-    messagingSenderId: '413028764414',
-    projectId: 'todoo-6ed91',
-    storageBucket: 'todoo-6ed91.firebasestorage.app',
-    iosBundleId: 'com.example.todo',
-  );
-
-  static const FirebaseOptions windows = FirebaseOptions(
-    apiKey: 'AIzaSyC1P6YjAedTrQqpKBBgGtBC5t-nWQdPHcU',
-    appId: '1:413028764414:web:fb3cd98fa6288a2f0673af',
-    messagingSenderId: '413028764414',
-    projectId: 'todoo-6ed91',
-    authDomain: 'todoo-6ed91.firebaseapp.com',
-    storageBucket: 'todoo-6ed91.firebasestorage.app',
-    measurementId: 'G-MZRFL6L85X',
+    apiKey: 'AIzaSyD3NwvFGcucuEujSOf68XhSc2U8ewYSl54',
+    appId: '1:802557482311:android:bf020eecf7a4f374eea862',
+    messagingSenderId: '802557482311',
+    projectId: 'todo-84887',
+    storageBucket: 'todo-84887.firebasestorage.app',
   );
 }

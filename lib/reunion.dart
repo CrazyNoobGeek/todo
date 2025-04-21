@@ -1,6 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:speech_to_text/speech_to_text.dart';
+import 'map_picker.dart';
 
 class ReunionScreen extends StatefulWidget {
   const ReunionScreen({super.key});
@@ -12,10 +14,13 @@ class ReunionScreen extends StatefulWidget {
 class _ReunionScreenState extends State<ReunionScreen> {
   final TextEditingController _titreController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
-  final TextEditingController _lienReunionController = TextEditingController();
+  final TextEditingController _locationOrLinkController = TextEditingController();
   DateTime? _selectedDate;
   TimeOfDay? _selectedStartTime;
   TimeOfDay? _selectedEndTime;
+
+  final SpeechToText _speechToText = SpeechToText();
+  bool _isListening = false;
 
   /// Fonction pour afficher un sélecteur de date
   Future<void> _selectDate(BuildContext context) async {
@@ -55,7 +60,7 @@ class _ReunionScreenState extends State<ReunionScreen> {
   Future<void> _ajouterReunion() async {
     if (_titreController.text.isEmpty ||
         _descriptionController.text.isEmpty ||
-        _lienReunionController.text.isEmpty ||
+        _locationOrLinkController.text.isEmpty ||
         _selectedDate == null ||
         _selectedStartTime == null ||
         _selectedEndTime == null) {
@@ -67,10 +72,10 @@ class _ReunionScreenState extends State<ReunionScreen> {
       await FirebaseFirestore.instance.collection('reunions').add({
         'titre': _titreController.text,
         'description': _descriptionController.text,
-        'lien_reunion': _lienReunionController.text,
+        'lien_reunion': _locationOrLinkController.text,
         'date': DateFormat('yyyy-MM-dd').format(_selectedDate!),
-        'heure_debut': _selectedStartTime!.format(context),
-        'heure_fin': _selectedEndTime!.format(context),
+        'heure_debut': _selectedStartTime != null ? _selectedStartTime!.format(context) : '',
+        'heure_fin': _selectedEndTime != null ? _selectedEndTime!.format(context) : '',
         'statut': 'En cours',
         'cree_le': Timestamp.now(),
       });
@@ -96,7 +101,7 @@ class _ReunionScreenState extends State<ReunionScreen> {
   void _clearFields() {
     _titreController.clear();
     _descriptionController.clear();
-    _lienReunionController.clear();
+    _locationOrLinkController.clear();
     setState(() {
       _selectedDate = null;
       _selectedStartTime = null;
@@ -126,10 +131,31 @@ class _ReunionScreenState extends State<ReunionScreen> {
               _buildTextField(_titreController, "Réunion"),
               const SizedBox(height: 12),
 
-              _buildTextField(_descriptionController, "Description"),
+              _buildDescriptionField(_descriptionController, "Description"),
               const SizedBox(height: 12),
 
-              _buildTextField(_lienReunionController, "Lien de la réunion (Google Meet, Zoom, etc.)"),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildTextField(_locationOrLinkController, "Lien de la réunion (Google Meet, Zoom, etc.) ou choisir un lieu"),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.location_on, color: Color(0xFF491B6D)),
+                    tooltip: 'Choisir un lieu sur la carte',
+                    onPressed: () async {
+                      final result = await Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const MapPickerScreen()),
+                      );
+                      if (result != null && result is Map) {
+                        setState(() {
+                          _locationOrLinkController.text = result['address'] ?? '${result['lat']},${result['lng']}';
+                        });
+                      }
+                    },
+                  ),
+                ],
+              ),
               const SizedBox(height: 20),
 
               // Sélection de la date
@@ -186,6 +212,56 @@ class _ReunionScreenState extends State<ReunionScreen> {
           borderSide: BorderSide.none,
         ),
       ),
+    );
+  }
+
+  /// Widget pour le champ de description avec micro
+  Widget _buildDescriptionField(TextEditingController controller, String hint) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: TextField(
+            controller: controller,
+            minLines: 2,
+            maxLines: 5,
+            decoration: InputDecoration(
+              hintText: hint,
+              filled: true,
+              fillColor: Colors.grey.shade200,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: BorderSide.none,
+              ),
+            ),
+          ),
+        ),
+        GestureDetector(
+          onLongPressStart: (_) async {
+            var available = await _speechToText.initialize();
+            if (available) {
+              setState(() => _isListening = true);
+              await _speechToText.listen(
+                onResult: (result) {
+                  controller.text = result.recognizedWords;
+                  controller.selection = TextSelection.fromPosition(TextPosition(offset: controller.text.length));
+                },
+              );
+            }
+          },
+          onLongPressEnd: (_) async {
+            await _speechToText.stop();
+            setState(() => _isListening = false);
+          },
+          child: Padding(
+            padding: const EdgeInsets.only(left: 8.0, top: 8.0),
+            child: Icon(
+              _isListening ? Icons.mic : Icons.mic_none,
+              color: _isListening ? Colors.red : Colors.grey,
+            ),
+          ),
+        ),
+      ],
     );
   }
 

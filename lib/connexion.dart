@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'home.dart';
 import 'register.dart';
 
@@ -78,6 +79,10 @@ class _ConnexionScreenState extends State<ConnexionScreen> {
       // Vérifie si des documents correspondant existent
       if (snapshot.docs.isNotEmpty) {
         _showMessageDialog("Succès", "Connexion réussie !"); // Message de réussite
+
+        // Enregistre l'état de connexion
+        SharedPreferences prefs = await SharedPreferences.getInstance();
+        await prefs.setBool('isLoggedIn', true);
 
         // Navigue vers la page d'accueil en remplaçant la page actuelle
         Navigator.pushReplacement(
