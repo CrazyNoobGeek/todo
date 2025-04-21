@@ -1,6 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:speech_to_text/speech_to_text.dart';
+import 'map_picker.dart';
 
 class ModifierReunionScreen extends StatefulWidget {
   final DocumentSnapshot reunion;
@@ -18,6 +20,9 @@ class _ModifierReunionScreenState extends State<ModifierReunionScreen> {
   DateTime? _date;
   TimeOfDay? _heureDebut;
   TimeOfDay? _heureFin;
+
+  final SpeechToText _speechToText = SpeechToText();
+  bool _isListening = false;
 
   @override
   void initState() {
@@ -114,33 +119,77 @@ class _ModifierReunionScreenState extends State<ModifierReunionScreen> {
     }
   }
 
+  void _startListening() {}
+
+  void _pickLocation() async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const MapPickerScreen()),
+    );
+    if (result != null && result is Map) {
+      setState(() {
+        // Store both address and coordinates in the controller as a single string, separated by '|' for easy parsing
+        // Example: 'address|lat,lng'
+        final address = result['address'] ?? '${result['lat']},${result['lng']}';
+        final coords = '${result['lat']},${result['lng']}';
+        _lienReunionController.text = '$address|$coords';
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text("Modifier Réunion"),
+        title: const Text('Modifier Réunion', style: TextStyle(color: Colors.white)),
         backgroundColor: const Color(0xFF491B6D),
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: SingleChildScrollView(
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Text(
-                "Modifier Réunion",
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-              ),
               const SizedBox(height: 20),
 
               _buildTextField(_titreController, "Réunion"),
               const SizedBox(height: 12),
 
-              _buildTextField(_descriptionController, "Description"),
+              _buildTextField(_descriptionController, "Description",
+                suffixIcon: GestureDetector(
+                  onLongPressStart: (_) async {
+                    bool available = await _speechToText.initialize();
+                    if (available) {
+                      setState(() => _isListening = true);
+                      _speechToText.listen(onResult: (result) {
+                        _descriptionController.text = result.recognizedWords;
+                        _descriptionController.selection = TextSelection.fromPosition(TextPosition(offset: _descriptionController.text.length));
+                      });
+                    }
+                  },
+                  onLongPressEnd: (_) async {
+                    await _speechToText.stop();
+                    setState(() => _isListening = false);
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 8.0, top: 8.0),
+                    child: Icon(
+                      _isListening ? Icons.mic : Icons.mic_none,
+                      color: _isListening ? Colors.red : Colors.grey,
+                    ),
+                  ),
+                ),
+              ),
               const SizedBox(height: 12),
 
-              _buildTextField(_lienReunionController, "Google Meet"),
+              _buildTextField(_lienReunionController, "Google Meet / Lieu",
+                suffixIcon: IconButton(
+                  icon: const Icon(Icons.map, color: Colors.deepPurple),
+                  onPressed: _pickLocation,
+                ),
+              ),
               const SizedBox(height: 20),
 
               const Text("Date", style: TextStyle(fontWeight: FontWeight.bold)),
@@ -185,18 +234,29 @@ class _ModifierReunionScreenState extends State<ModifierReunionScreen> {
   }
 
   /// Widget pour les champs de texte
-  Widget _buildTextField(TextEditingController controller, String hint) {
-    return TextField(
-      controller: controller,
-      decoration: InputDecoration(
-        hintText: hint,
-        filled: true,
-        fillColor: Colors.grey.shade200,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: BorderSide.none,
+  Widget _buildTextField(TextEditingController controller, String hint, {Widget? suffixIcon}) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: TextField(
+            controller: controller,
+            minLines: 2,
+            maxLines: 5,
+            decoration: InputDecoration(
+              hintText: hint,
+              filled: true,
+              fillColor: Colors.grey.shade200,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: BorderSide.none,
+              ),
+            ),
+          ),
         ),
-      ),
+        if (suffixIcon != null)
+          suffixIcon,
+      ],
     );
   }
 

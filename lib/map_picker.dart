@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class MapPickerScreen extends StatefulWidget {
   const MapPickerScreen({super.key});
@@ -23,16 +24,71 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
   }
 
   Future<void> _determinePosition() async {
-    LocationPermission permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-    }
-    if (permission == LocationPermission.deniedForever || permission == LocationPermission.denied) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Accès à la localisation refusé.')),
+    // 1. Check if location services are enabled (GPS)
+    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      // Ask the user to enable location services
+      await showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Localisation désactivée'),
+          content: const Text('Activez la localisation (GPS) pour utiliser cette fonctionnalité.'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Geolocator.openLocationSettings();
+                Navigator.of(context).pop();
+              },
+              child: const Text('Ouvrir les paramètres'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Annuler'),
+            ),
+          ],
+        ),
       );
       return;
     }
+
+    // 2. Request permission (shows system popup)
+    var status = await Permission.location.status;
+    if (status.isDenied) {
+      status = await Permission.location.request();
+      if (status.isDenied) {
+        // User denied, show info and allow to try again
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Autorisez l\'accès à la localisation pour utiliser cette fonctionnalité.')),
+        );
+        return;
+      }
+    }
+    if (status.isPermanentlyDenied) {
+      // User selected "Don't ask again"
+      await showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Permission refusée'),
+          content: const Text('Vous avez définitivement refusé la permission. Activez-la dans les paramètres.'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                openAppSettings();
+                Navigator.of(context).pop();
+              },
+              child: const Text('Ouvrir les paramètres'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Annuler'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
+    // 3. Permission granted, get current position
     Position position = await Geolocator.getCurrentPosition();
     setState(() {
       _currentPosition = position;

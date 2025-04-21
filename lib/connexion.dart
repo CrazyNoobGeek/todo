@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'home.dart';
 import 'register.dart';
@@ -60,40 +61,40 @@ class _ConnexionScreenState extends State<ConnexionScreen> {
 
   /// Fonction pour vérifier les informations de connexion dans Firestore
   Future<void> _loginUser() async {
-    // Valide les entrées utilisateur avant de continuer
     if (!_validateInputs()) {
       return;
     }
 
-    String email = _emailController.text.trim(); // Adresse email entrée par l'utilisateur
-    String password = _passwordController.text.trim(); // Mot de passe entré par l'utilisateur
+    String email = _emailController.text.trim();
+    String password = _passwordController.text.trim();
 
     try {
-      // Effectue une requête Firestore pour vérifier les informations utilisateur
-      QuerySnapshot snapshot = await FirebaseFirestore.instance
-          .collection('utilisateur') // Accède à la collection "utilisateur"
-          .where('email', isEqualTo: email) // Filtre par adresse email
-          .where('motdepasse', isEqualTo: password) // Filtre par mot de passe
-          .get(); // Exécute la requête
-
-      // Vérifie si des documents correspondant existent
-      if (snapshot.docs.isNotEmpty) {
-        _showMessageDialog("Succès", "Connexion réussie !"); // Message de réussite
-
-        // Enregistre l'état de connexion
-        SharedPreferences prefs = await SharedPreferences.getInstance();
-        await prefs.setBool('isLoggedIn', true);
-
-        // Navigue vers la page d'accueil en remplaçant la page actuelle
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const HomeScreen()),
-        );
-      } else {
-        _showMessageDialog("Erreur", "Email ou mot de passe incorrect."); // Message d'erreur
+      // Utilise Firebase Auth pour la connexion
+      UserCredential userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+      _showMessageDialog("Succès", "Connexion réussie !");
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('isLoggedIn', true);
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const HomeScreen()),
+      );
+    } on FirebaseAuthException catch (e) {
+      String errorMessage;
+      switch (e.code) {
+        case 'user-not-found':
+          errorMessage = "Aucun utilisateur trouvé pour cet email.";
+          break;
+        case 'wrong-password':
+          errorMessage = "Mot de passe incorrect.";
+          break;
+        default:
+          errorMessage = "Erreur : ${e.message}";
       }
+      _showMessageDialog("Erreur", errorMessage);
     } catch (e) {
-      // Capture les erreurs et affiche un message d'erreur
       _showMessageDialog("Erreur", "Une erreur est survenue : ${e.toString()}");
     }
   }

@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:speech_to_text/speech_to_text.dart';
 
 class ModifierScreen extends StatefulWidget {
   final DocumentSnapshot task;
@@ -19,6 +20,9 @@ class _ModifierScreenState extends State<ModifierScreen> {
   TimeOfDay? _heureDebut;
   DateTime? _dateFin;
   TimeOfDay? _heureFin;
+  
+  final SpeechToText _speechToText = SpeechToText();
+  bool _isListening = false;
 
   @override
   void initState() {
@@ -125,25 +129,27 @@ class _ModifierScreenState extends State<ModifierScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text("Modifier Tâche"),
+        title: const Text('Modifier Tâche', style: TextStyle(color: Colors.white)),
         backgroundColor: const Color(0xFF491B6D),
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: SingleChildScrollView(
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Text(
-                "Modifier Tache",
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-              ),
               const SizedBox(height: 20),
 
-              _buildTextField(_titreController, "Tache"),
+              _buildTextField(_titreController, "Tâche"),
               const SizedBox(height: 12),
 
-              _buildTextField(_descriptionController, "Description"),
+              _buildTextField(_descriptionController, "Description",
+                suffixIcon: IconButton(
+                  icon: const Icon(Icons.mic, color: Colors.deepPurple),
+                  onPressed: _startListening,
+                ),
+              ),
               const SizedBox(height: 12),
 
               _buildTextField(_categorieController, "Catégorie"),
@@ -187,18 +193,51 @@ class _ModifierScreenState extends State<ModifierScreen> {
   }
 
   /// Widget pour les champs de texte
-  Widget _buildTextField(TextEditingController controller, String hint) {
-    return TextField(
-      controller: controller,
-      decoration: InputDecoration(
-        hintText: hint,
-        filled: true,
-        fillColor: Colors.grey.shade200,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: BorderSide.none,
+  Widget _buildTextField(TextEditingController controller, String hint, {Widget? suffixIcon}) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: TextField(
+            controller: controller,
+            minLines: 2,
+            maxLines: 5,
+            decoration: InputDecoration(
+              hintText: hint,
+              filled: true,
+              fillColor: Colors.grey.shade200,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: BorderSide.none,
+              ),
+            ),
+          ),
         ),
-      ),
+        if (suffixIcon != null)
+          GestureDetector(
+            onLongPressStart: (_) async {
+              bool available = await _speechToText.initialize();
+              if (available) {
+                setState(() => _isListening = true);
+                _speechToText.listen(onResult: (result) {
+                  controller.text = result.recognizedWords;
+                  controller.selection = TextSelection.fromPosition(TextPosition(offset: controller.text.length));
+                });
+              }
+            },
+            onLongPressEnd: (_) async {
+              await _speechToText.stop();
+              setState(() => _isListening = false);
+            },
+            child: Padding(
+              padding: const EdgeInsets.only(left: 8.0, top: 8.0),
+              child: Icon(
+                _isListening ? Icons.mic : Icons.mic_none,
+                color: _isListening ? Colors.red : Colors.grey,
+              ),
+            ),
+          ),
+      ],
     );
   }
 
@@ -230,4 +269,6 @@ class _ModifierScreenState extends State<ModifierScreen> {
       ],
     );
   }
+
+  void _startListening() {}
 }

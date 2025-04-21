@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'connexion.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -75,17 +76,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
     String password = _passwordController.text.trim();
 
     try {
-      
-      print("Nom: $name, Email: $email");
-
-      // Enregistrer les données de l'utilisateur dans Firestore
-      var result = await FirebaseFirestore.instance.collection('utilisateur').add({
+      // Crée un utilisateur Firebase Auth
+      UserCredential userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+      String uid = userCredential.user!.uid;
+      // Enregistre les données complémentaires dans Firestore sous le même UID
+      await FirebaseFirestore.instance.collection('utilisateur').doc(uid).set({
         'nom': name,
         'email': email,
-        'motdepasse': password,
       });
-
-      print("Utilisateur enregistré avec ID : ${result.id}");
 
       showDialog(
         context: context,
@@ -106,29 +107,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
       _nameController.clear();
       _emailController.clear();
       _passwordController.clear();
-    } on FirebaseException catch (e) {
+    } on FirebaseAuthException catch (e) {
       String errorMessage;
-
       switch (e.code) {
-        case 'permission-denied':
-          errorMessage = "Permission refusée. Vérifiez les règles Firestore.";
+        case 'email-already-in-use':
+          errorMessage = "Cet email est déjà utilisé.";
           break;
-        case 'unavailable':
-          errorMessage = "Service Firestore indisponible. Vérifiez votre connexion Internet.";
+        case 'invalid-email':
+          errorMessage = "Adresse email invalide.";
           break;
-        case 'not-found':
-          errorMessage = "Collection Firestore non trouvée.";
-          break;
-        case 'aborted':
-          errorMessage = "L'opération a été annulée.";
-          break;
-        case 'deadline-exceeded':
-          errorMessage = "Délai d'attente dépassé. Veuillez réessayer.";
+        case 'weak-password':
+          errorMessage = "Le mot de passe est trop faible.";
           break;
         default:
-          errorMessage = "Erreur Firestore inconnue : ${e.message}";
+          errorMessage = "Erreur : ${e.message}";
       }
-
       _showErrorDialog(errorMessage);
     } catch (e) {
       _showErrorDialog("Erreur inattendue : ${e.toString()}");
@@ -224,7 +217,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                 ),
                 const SizedBox(height: 20),
-                   Row(
+                Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     const Text("Vous avez déjà un compte ? "),

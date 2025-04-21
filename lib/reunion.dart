@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 import 'map_picker.dart';
+import 'notification_helper.dart';
 
 class ReunionScreen extends StatefulWidget {
   const ReunionScreen({super.key});
@@ -69,7 +70,7 @@ class _ReunionScreenState extends State<ReunionScreen> {
     }
 
     try {
-      await FirebaseFirestore.instance.collection('reunions').add({
+      final docRef = await FirebaseFirestore.instance.collection('reunions').add({
         'titre': _titreController.text,
         'description': _descriptionController.text,
         'lien_reunion': _locationOrLinkController.text,
@@ -79,7 +80,48 @@ class _ReunionScreenState extends State<ReunionScreen> {
         'statut': 'En cours',
         'cree_le': Timestamp.now(),
       });
-
+      // Add notification to Firestore (2h before, start, end)
+      DateTime startDateTime = DateTime(
+        _selectedDate!.year,
+        _selectedDate!.month,
+        _selectedDate!.day,
+        _selectedStartTime!.hour,
+        _selectedStartTime!.minute,
+      );
+      DateTime endDateTime = DateTime(
+        _selectedDate!.year,
+        _selectedDate!.month,
+        _selectedDate!.day,
+        _selectedEndTime!.hour,
+        _selectedEndTime!.minute,
+      );
+      await FirebaseFirestore.instance.collection('notifications').add({
+        'type': 'meeting',
+        'title': 'Réunion à venir',
+        'body': 'La réunion "${_titreController.text}" commence dans 2 heures.',
+        'timestamp': Timestamp.fromDate(startDateTime.subtract(const Duration(hours: 2))),
+      });
+      await FirebaseFirestore.instance.collection('notifications').add({
+        'type': 'meeting',
+        'title': 'Début Réunion',
+        'body': 'La réunion "${_titreController.text}" commence maintenant.',
+        'timestamp': Timestamp.fromDate(startDateTime),
+      });
+      await FirebaseFirestore.instance.collection('notifications').add({
+        'type': 'meeting',
+        'title': 'Fin Réunion',
+        'body': 'La réunion "${_titreController.text}" est terminée. Veuillez mettre à jour le statut.',
+        'timestamp': Timestamp.fromDate(endDateTime),
+      });
+      // Schedule local notifications
+      await NotificationHelper.scheduleMultipleNotifications(
+        id: docRef.hashCode,
+        title: 'Rappel Réunion',
+        body: 'La réunion "${_titreController.text}"',
+        startTime: startDateTime,
+        endTime: endDateTime,
+        status: 'En cours',
+      );
       _showMessage("Réunion ajoutée avec succès !");
       _clearFields();
     } catch (e) {
@@ -113,8 +155,9 @@ class _ReunionScreenState extends State<ReunionScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Ajouter Réunion'),
+        title: const Text('Ajouter Réunion', style: TextStyle(color: Colors.white)),
         backgroundColor: const Color(0xFF491B6D),
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),

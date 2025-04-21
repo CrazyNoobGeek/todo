@@ -1,0 +1,2 @@
+E:/app/todo-master_mobile_project/android/app/.cxx/Debug/n5p30g1v/x86_64/CMakeFiles/edit_cache.dir
+E:/app/todo-master_mobile_project/android/app/.cxx/Debug/n5p30g1v/x86_64/CMakeFiles/rebuild_cache.dir

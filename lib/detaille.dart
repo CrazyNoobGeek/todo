@@ -2,16 +2,18 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'modifier.dart';
+import 'modifier_reunion.dart';
 
 class DetailleScreen extends StatelessWidget {
-  final DocumentSnapshot task;
+  final DocumentSnapshot? meeting;
+  final DocumentSnapshot? task;
 
-  const DetailleScreen({super.key, required this.task});
+  const DetailleScreen({super.key, this.meeting, this.task});
 
-  /// Fonction pour mettre à jour le statut de la tâche
   void _updateStatus(BuildContext context, String newStatus) async {
+    if (task == null) return;
     try {
-      await FirebaseFirestore.instance.collection('taches').doc(task.id).update({
+      await FirebaseFirestore.instance.collection('taches').doc(task!.id).update({
         'statut': newStatus,
       });
       ScaffoldMessenger.of(context).showSnackBar(
@@ -31,172 +33,235 @@ class DetailleScreen extends StatelessWidget {
     }
   }
 
+  Widget _buildStatusButtons(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        ElevatedButton(
+          onPressed: () => _updateStatus(context, 'Non débutée'),
+          style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+          child: const Text('Non débutée'),
+        ),
+        const SizedBox(height: 8),
+        ElevatedButton(
+          onPressed: () => _updateStatus(context, 'En cours'),
+          style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
+          child: const Text('En cours'),
+        ),
+        const SizedBox(height: 8),
+        ElevatedButton(
+          onPressed: () => _updateStatus(context, 'Terminée'),
+          style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+          child: const Text('Terminée'),
+        ),
+        const SizedBox(height: 8),
+        ElevatedButton(
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => ModifierScreen(task: task!),
+              ),
+            );
+          },
+          style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
+          child: const Text('Modifier'),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final String? lienOrLocation = task['lien_reunion'] as String?;
+    if (meeting == null && task == null) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Détails')), 
+        body: const Center(child: Text('Aucune donnée à afficher.')),
+      );
+    }
+    final dynamic data = meeting ?? task;
+    final bool isMeeting = meeting != null;
+    final String title = data['titre'] ?? 'Non renseigné';
+    final String? lienOrLocation = isMeeting ? data['lien_reunion'] as String? : null;
+    final String description = data['description'] ?? 'Non renseigné';
+    final String heureDebut = data['heure_debut'] ?? 'Non renseigné';
+    final String heureFin = data['heure_fin'] ?? 'Non renseigné';
+    final String statut = data['statut'] ?? 'Non renseigné';
+
     return Scaffold(
+      backgroundColor: const Color(0xFFF6F6F6),
       appBar: AppBar(
-        title: const Text('Détails de la Tâche'),
+        title: Text(isMeeting ? 'Détails Réunion' : 'Détails Tâche'),
         backgroundColor: const Color(0xFF491B6D),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.edit),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => isMeeting
+                      ? ModifierReunionScreen(reunion: meeting!)
+                      : ModifierScreen(task: task!),
+                ),
+              );
+            },
+          ),
+        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Titre de la tâche
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.grey.shade200,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    task['titre'],
-                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    task['categorie'],
-                    style: const TextStyle(color: Colors.deepPurple, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 8),
-                  // Description scrollable zone
-                  Container(
-                    constraints: const BoxConstraints(maxHeight: 40), // ~2 lines
-                    child: Scrollbar(
-                      thumbVisibility: true,
-                      child: SingleChildScrollView(
-                        scrollDirection: Axis.vertical,
-                        child: Text(
-                          "Description : "+(task['description'] ?? ''),
-                          maxLines: null, // allow as many as needed in scroll
-                          overflow: TextOverflow.visible,
-                          style: const TextStyle(fontSize: 16),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  if (lienOrLocation != null && lienOrLocation.isNotEmpty)
-                    InkWell(
-                      onTap: () async {
-                        if (_isLocation(lienOrLocation)) {
-                          final Uri mapUri = _getMapUri(lienOrLocation);
-                          if (await canLaunchUrl(mapUri)) {
-                            await launchUrl(mapUri);
-                          }
-                        } else if (await canLaunchUrl(Uri.parse(lienOrLocation))) {
-                          await launchUrl(Uri.parse(lienOrLocation), mode: LaunchMode.externalApplication);
-                        }
-                      },
-                      child: Row(
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Card(
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                elevation: 4,
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
                         children: [
-                          Icon(_isLocation(lienOrLocation) ? Icons.location_on : Icons.link, color: Colors.blue),
-                          const SizedBox(width: 8),
-                          Flexible(child: Text(lienOrLocation, style: const TextStyle(decoration: TextDecoration.underline, color: Colors.blue), overflow: TextOverflow.ellipsis)),
+                          Icon(isMeeting ? Icons.groups : Icons.task, color: Color(0xFF491B6D)),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(title, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+                          ),
                         ],
                       ),
-                    ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      const Icon(Icons.access_time, color: Colors.black54),
-                      const SizedBox(width: 5),
-                      Text("${task['heure_debut']} - ${task['heure_fin']}"),
-                      const Spacer(),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: task['statut'] == "Non débutée"
-                              ? Colors.red
-                              : task['statut'] == "En cours"
-                                  ? Colors.orange
-                                  : Colors.green,
-                          borderRadius: BorderRadius.circular(12),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Icon(Icons.access_time, color: Colors.deepPurple),
+                          const SizedBox(width: 8),
+                          Text('$heureDebut - $heureFin', style: const TextStyle(fontWeight: FontWeight.w500)),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      if (isMeeting && lienOrLocation != null && lienOrLocation.isNotEmpty)
+                        Builder(
+                          builder: (context) {
+                            // Parse the stored value: 'address|lat,lng' or just address
+                            String displayText = lienOrLocation;
+                            String? coords;
+                            if (lienOrLocation.contains('|')) {
+                              final parts = lienOrLocation.split('|');
+                              displayText = parts[0];
+                              coords = parts.length > 1 ? parts[1] : null;
+                            }
+                            return InkWell(
+                              onTap: () async {
+                                Uri? uri;
+                                // If it looks like a Google Meet link, try to open in app
+                                bool isGoogleMeet = false;
+                                if (displayText.contains('meet.google.com') || (coords == null && lienOrLocation.contains('meet.google.com'))) {
+                                  isGoogleMeet = true;
+                                  // Try to use the Google Meet app scheme
+                                  final meetCode = RegExp(r"meet.google.com/([a-zA-Z0-9-]+)").firstMatch(displayText)?.group(1)
+                                    ?? RegExp(r"meet.google.com/([a-zA-Z0-9-]+)").firstMatch(lienOrLocation)?.group(1);
+                                  if (meetCode != null) {
+                                    // Always try to launch the web URL, let Android intent resolver offer the Google Meet app if available
+                                    final appUri = Uri.parse('https://meet.google.com/$meetCode');
+                                    if (await canLaunchUrl(appUri)) {
+                                      await launchUrl(appUri, mode: LaunchMode.externalApplication);
+                                      return;
+                                    } else {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(content: Text('Impossible d\'ouvrir ce lien Google Meet.')),
+                                      );
+                                      return;
+                                    }
+                                  }
+                                }
+                                if (!isGoogleMeet && coords != null && coords.contains(',')) {
+                                  uri = _getMapUri(coords);
+                                } else if (!isGoogleMeet && _isLocation(lienOrLocation)) {
+                                  uri = _getMapUri(lienOrLocation);
+                                } else if (!isGoogleMeet) {
+                                  uri = Uri.tryParse(lienOrLocation);
+                                  if (uri != null && uri.scheme.isEmpty) {
+                                    uri = Uri.parse('https://' + lienOrLocation);
+                                  }
+                                }
+                                if (uri != null && await canLaunchUrl(uri)) {
+                                  await launchUrl(uri, mode: LaunchMode.externalApplication);
+                                } else {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('Impossible d\'ouvrir ce lien.')),
+                                  );
+                                }
+                              },
+                              child: Row(
+                                children: [
+                                  Icon((coords != null || _isLocation(lienOrLocation)) ? Icons.location_on : Icons.link, color: Colors.blue),
+                                  const SizedBox(width: 8),
+                                  Flexible(
+                                    child: Text(
+                                      displayText,
+                                      style: const TextStyle(color: Colors.blue, decoration: TextDecoration.underline),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
                         ),
-                        child: Text(
-                          task['statut'],
-                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                      if (isMeeting && (lienOrLocation == null || lienOrLocation.isEmpty))
+                        Row(
+                          children: [
+                            Icon(Icons.location_off, color: Colors.grey),
+                            const SizedBox(width: 8),
+                            Text('Lieu/Lien non renseigné', style: TextStyle(color: Colors.grey)),
+                          ],
                         ),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Icon(Icons.info_outline, color: Colors.deepPurple),
+                          const SizedBox(width: 8),
+                          Expanded(child: Text(description)),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Icon(Icons.flag, color: Colors.orange),
+                          const SizedBox(width: 8),
+                          Text('Statut: $statut', style: const TextStyle(fontWeight: FontWeight.w500)),
+                        ],
                       ),
                     ],
                   ),
-                ],
+                ),
               ),
-            ),
-
-            const SizedBox(height: 20),
-
-            // Boutons pour changer le statut
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () => _updateStatus(context, "Non débutée"),
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                child: const Text("Non débutée"),
-              ),
-            ),
-            const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () => _updateStatus(context, "En cours"),
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
-                child: const Text("En cours"),
-              ),
-            ),
-            const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () => _updateStatus(context, "Terminée"),
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-                child: const Text("Terminée"),
-              ),
-            ),
-            const SizedBox(height: 20),
-
-            // Bouton pour modifier la tâche
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => ModifierScreen(task: task)),
-                  );
-                },
-                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF491B6D)),
-                child: const Text("Modifier", style: TextStyle(color: Colors.white)),
-              ),
-            ),
-          ],
+              if (!isMeeting) ...[
+                const SizedBox(height: 20),
+                _buildStatusButtons(context),
+              ],
+            ],
+          ),
         ),
       ),
     );
   }
 
-  // Helper to check if the string is a location (coordinates or address)
   bool _isLocation(String value) {
-    // Simple check: if value contains a comma and both parts are numbers, treat as coordinates
     final parts = value.split(',');
     if (parts.length == 2) {
       final lat = double.tryParse(parts[0].trim());
       final lng = double.tryParse(parts[1].trim());
       if (lat != null && lng != null) return true;
     }
-    // Or if it looks like an address (contains street/locality/country keywords)
     if (value.contains('Rue') || value.contains('Street') || value.contains('Avenue') || value.contains('Blvd') || value.contains('Algiers') || value.contains('Paris')) {
       return true;
     }
     return false;
   }
 
-  // Helper to create a Google Maps URI from a location string
   Uri _getMapUri(String value) {
     final parts = value.split(',');
     if (parts.length == 2) {
@@ -206,7 +271,6 @@ class DetailleScreen extends StatelessWidget {
         return Uri.parse('https://www.google.com/maps/search/?api=1&query=$lat,$lng');
       }
     }
-    // Otherwise, treat as address
     return Uri.parse('https://www.google.com/maps/search/?api=1&query=${Uri.encodeComponent(value)}');
   }
 }

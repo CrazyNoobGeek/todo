@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:speech_to_text/speech_to_text.dart';
+import 'notification_helper.dart';
 
 class TacheScreen extends StatefulWidget {
   const TacheScreen({super.key});
@@ -62,27 +63,68 @@ class _TacheScreenState extends State<TacheScreen> {
     if (_titreController.text.isEmpty ||
         _descriptionController.text.isEmpty ||
         _categorieController.text.isEmpty ||
-        _selectedStartTime == null ||
         _selectedStartDate == null ||
-        _selectedEndTime == null ||
-        _selectedEndDate == null) {
+        _selectedStartTime == null ||
+        _selectedEndDate == null ||
+        _selectedEndTime == null) {
       _showMessage("Veuillez remplir tous les champs.");
       return;
     }
 
     try {
-      await FirebaseFirestore.instance.collection('taches').add({
+      final docRef = await FirebaseFirestore.instance.collection('taches').add({
         'titre': _titreController.text,
         'description': _descriptionController.text,
         'categorie': _categorieController.text,
         'date_debut': DateFormat('yyyy-MM-dd').format(_selectedStartDate!),
-        'heure_debut': _selectedStartTime != null ? _selectedStartTime!.format(context) : '',
+        'heure_debut': DateFormat('HH:mm').format(DateTime(0, 0, 0, _selectedStartTime!.hour, _selectedStartTime!.minute)),
         'date_fin': DateFormat('yyyy-MM-dd').format(_selectedEndDate!),
-        'heure_fin': _selectedEndTime != null ? _selectedEndTime!.format(context) : '',
+        'heure_fin': DateFormat('HH:mm').format(DateTime(0, 0, 0, _selectedEndTime!.hour, _selectedEndTime!.minute)),
         'statut': 'En cours',
         'cree_le': Timestamp.now(),
       });
-
+      // Add notification to Firestore (2h before, start, end)
+      DateTime startDateTime = DateTime(
+        _selectedStartDate!.year,
+        _selectedStartDate!.month,
+        _selectedStartDate!.day,
+        _selectedStartTime!.hour,
+        _selectedStartTime!.minute,
+      );
+      DateTime endDateTime = DateTime(
+        _selectedEndDate!.year,
+        _selectedEndDate!.month,
+        _selectedEndDate!.day,
+        _selectedEndTime!.hour,
+        _selectedEndTime!.minute,
+      );
+      await FirebaseFirestore.instance.collection('notifications').add({
+        'type': 'task',
+        'title': 'Tâche à venir',
+        'body': 'La tâche "${_titreController.text}" commence dans 2 heures.',
+        'timestamp': Timestamp.fromDate(startDateTime.subtract(const Duration(hours: 2))),
+      });
+      await FirebaseFirestore.instance.collection('notifications').add({
+        'type': 'task',
+        'title': 'Début Tâche',
+        'body': 'La tâche "${_titreController.text}" commence maintenant.',
+        'timestamp': Timestamp.fromDate(startDateTime),
+      });
+      await FirebaseFirestore.instance.collection('notifications').add({
+        'type': 'task',
+        'title': 'Fin Tâche',
+        'body': 'La tâche "${_titreController.text}" est terminée. Veuillez mettre à jour le statut.',
+        'timestamp': Timestamp.fromDate(endDateTime),
+      });
+      // Schedule local notifications
+      await NotificationHelper.scheduleMultipleNotifications(
+        id: docRef.hashCode,
+        title: 'Rappel Tâche',
+        body: 'La tâche "${_titreController.text}"',
+        startTime: startDateTime,
+        endTime: endDateTime,
+        status: 'En cours',
+      );
       _showMessage("Tâche ajoutée avec succès !");
       _clearFields();
     } catch (e) {
@@ -115,8 +157,9 @@ class _TacheScreenState extends State<TacheScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Ajouter Tache'),
+        title: const Text('Ajouter Tache', style: TextStyle(color: Colors.white)),
         backgroundColor: const Color(0xFF491B6D),
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),

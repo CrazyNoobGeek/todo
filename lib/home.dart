@@ -6,6 +6,8 @@ import 'modifier_reunion.dart';
 import 'detaille.dart';
 import 'calander.dart';
 import 'connexion.dart';
+import 'compte.dart';
+import 'notifications.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -20,10 +22,25 @@ class _HomeScreenState extends State<HomeScreen> {
   late String _formattedDate; 
   late String _currentTime; 
 
+  int _notifCount = 0;
+
   @override
   void initState() {
     super.initState();
     _updateDateTime(); 
+    _listenNotifCount();
+  }
+
+  void _listenNotifCount() {
+    FirebaseFirestore.instance
+        .collection('notifications')
+        .where('timestamp', isGreaterThan: Timestamp.now())
+        .snapshots()
+        .listen((snapshot) {
+      setState(() {
+        _notifCount = snapshot.docs.length;
+      });
+    });
   }
 
   void _updateDateTime() {
@@ -101,7 +118,12 @@ class _HomeScreenState extends State<HomeScreen> {
 
 
   void _onItemTapped(int index) {
-    if (index == 2) {
+    if (index == 1) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const CompteScreen()),
+      );
+    } else if (index == 2) {
       Navigator.push(
         context,
         MaterialPageRoute(builder: (context) => const ChoixScreen()),
@@ -110,6 +132,11 @@ class _HomeScreenState extends State<HomeScreen> {
       Navigator.push(
         context,
         MaterialPageRoute(builder: (context) => const CalendarScreen()),
+      );
+    } else if (index == 4) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const NotificationsScreen()),
       );
     }
   }
@@ -204,12 +231,44 @@ class _HomeScreenState extends State<HomeScreen> {
         selectedItemColor: const Color(0xFF491B6D),
         unselectedItemColor: Colors.black54, 
         elevation: 10,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home ), label: ""), 
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: ""), 
-          BottomNavigationBarItem(icon: Icon(Icons.add_circle, size: 40), label: ""), 
-          BottomNavigationBarItem(icon: Icon(Icons.calendar_today), label: ""), // Calendrier
-          BottomNavigationBarItem(icon: Icon(Icons.notifications), label: ""), 
+        items: [
+          const BottomNavigationBarItem(icon: Icon(Icons.home ), label: ""), 
+          const BottomNavigationBarItem(icon: Icon(Icons.person), label: ""), 
+          const BottomNavigationBarItem(icon: Icon(Icons.add_circle, size: 40), label: ""), 
+          const BottomNavigationBarItem(icon: Icon(Icons.calendar_today), label: ""), // Calendrier
+          BottomNavigationBarItem(
+            icon: Stack(
+              children: [
+                const Icon(Icons.notifications),
+                if (_notifCount > 0)
+                  Positioned(
+                    right: 0,
+                    top: 0,
+                    child: Container(
+                      padding: const EdgeInsets.all(2),
+                      decoration: BoxDecoration(
+                        color: Colors.red,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      constraints: const BoxConstraints(
+                        minWidth: 16,
+                        minHeight: 16,
+                      ),
+                      child: Text(
+                        '$_notifCount',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            label: "",
+          ),
         ],
       ),
     );
@@ -229,7 +288,6 @@ class _HomeScreenState extends State<HomeScreen> {
           );
         }
 
-        
         return Column(
           children: snapshot.data!.docs.map((doc) {
             return _buildEventCard(
@@ -240,10 +298,10 @@ class _HomeScreenState extends State<HomeScreen> {
               status: doc['statut'],
               statusColor: Colors.red, 
               onTap: () {
-              
+                print(doc.data());
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => ModifierReunionScreen(reunion: doc)),
+                  MaterialPageRoute(builder: (context) => DetailleScreen(meeting: doc)),
                 );
               },
             );
@@ -278,7 +336,6 @@ class _HomeScreenState extends State<HomeScreen> {
               status: doc['statut'], 
               statusColor: Colors.orange, // Couleur du statut
               onTap: () {
-                
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (context) => DetailleScreen(task: doc)),
