@@ -1,0 +1,59 @@
+# Flutter/Dart/Pub related
+.dart_tool/
+.packages
+.pub/
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+.flutter-versions
+
+# IntelliJ related
+*.iml
+.idea/
+
+# VS Code related
+.vscode/
+
+# Android related
+**/android/**/local.properties
+**/android/**/app/google-services.json
+
+# iOS related
+**/ios/**/Runner/GeneratedPluginRegistrant.*
+**/ios/**/Flutter/Flutter.podspec
+**/ios/**/Flutter/Generated.xcconfig
+**/ios/**/Flutter/ephemeral/
+**/ios/**/Flutter/App.framework
+**/ios/**/Flutter/Flutter.framework
+**/ios/**/Flutter/Flutter.podspec
+**/ios/**/Flutter/GeneratedPluginRegistrant.*
+**/ios/**/Runner.xcworkspace/
+**/ios/**/Pods/
+
+# macOS related
+**/macos/Flutter/ephemeral/
+**/macos/Flutter/Flutter.podspec
+**/macos/Flutter/GeneratedPluginRegistrant.*
+**/macos/Pods/
+
+# Web related
+**/web/generated_plugin_registrant.dart
+
+# Firebase related
+firebase-debug.log
+
+# Misc
+*.log
+*.tmp
+*.swp
+
+# Coverage
+coverage/
+
+# Other
+.DS_Store
+Thumbs.db
+
+# Prevent committing sensitive files
+.env
+.env.*
