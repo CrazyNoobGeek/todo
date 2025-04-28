@@ -11,3 +11,23 @@ GeneratedPluginRegistrant.java
 key.properties
 **/*.keystore
 **/*.jks
+# Flutter/Dart/Pub related
+.dart_tool/
+.packages
+.pub/
+build/
+# Android/IntelliJ
+*.iml
+.idea/
+android/.gradle/
+android/local.properties
+# iOS/Xcode
+ios/Flutter/Flutter.framework
+ios/Flutter/Flutter.podspec
+ios/ServiceDefinitions.json
+ios/Runner.xcworkspace/
+ios/Pods/
+# Others
+*.apk
+*.ipa
+*.DS_Store

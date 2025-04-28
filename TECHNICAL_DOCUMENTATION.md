@@ -1,148 +1,149 @@
-# Documentation Technique – Todo Master Mobile Project
+# Technical Documentation – Todo Master Mobile Project
 
-## Table des matières
-1. [Architecture générale](#architecture-générale)
-2. [Dépendances et configuration](#dépendances-et-configuration)
-3. [Gestion de l’authentification Firebase](#gestion-de-lauthentification-firebase)
-4. [Gestion des utilisateurs (Firestore)](#gestion-des-utilisateurs-firestore)
-5. [Gestion des tâches](#gestion-des-tâches)
-6. [Gestion des réunions](#gestion-des-réunions)
-7. [Notifications locales](#notifications-locales)
-8. [Structure des fichiers](#structure-des-fichiers)
-9. [Principaux Widgets/Screens](#principaux-widgets-screens)
-10. [Bonnes pratiques & sécurité](#bonnes-pratiques--sécurité)
-
----
-
-## 1. Architecture générale
-
-- **Flutter** (Dart) : architecture basée sur des Widgets.
-- **Firebase** :
-  - Authentification (Firebase Auth)
-  - Base de données NoSQL (Cloud Firestore)
-- **Notifications locales** : `flutter_local_notifications`
-
-Flux principal :
-- L’utilisateur s’authentifie (Firebase Auth)
-- Les infos utilisateur sont récupérées/sauvegardées dans Firestore
-- L’utilisateur gère ses tâches et réunions (CRUD)
-- Notifications programmées pour rappels
+## Table of Contents
+1. [General Architecture](#general-architecture)
+2. [Dependencies & Configuration](#dependencies--configuration)
+3. [Firebase Authentication Management](#firebase-authentication-management)
+4. [User Management (Firestore)](#user-management-firestore)
+5. [Task Management](#task-management)
+6. [Meeting Management](#meeting-management)
+7. [Local Notifications](#local-notifications)
+8. [File Structure](#file-structure)
+9. [Main Widgets/Screens](#main-widgets-screens)
+10. [Best Practices & Security](#best-practices--security)
 
 ---
 
-## 2. Dépendances et configuration
+## 1. General Architecture
 
-- `firebase_auth` : Authentification
-- `cloud_firestore` : Base de données
-- `flutter_local_notifications` : Notifications
-- `speech_to_text` : Saisie vocale
-- `intl` : Formats date/heure
+- **Flutter** (Dart): Widget-based architecture.
+- **Firebase:**
+  - Authentication (Firebase Auth)
+  - NoSQL Database (Cloud Firestore)
+- **Local notifications:** `flutter_local_notifications`
 
-**Configuration Firebase** :
-- Placer `google-services.json` dans `android/app/`
-- Vérifier le package name dans Firebase Console
-- Activer Email/Password dans Auth
+Main flow:
+- The user authenticates (Firebase Auth)
+- User info is retrieved/saved in Firestore
+- The user manages tasks and meetings (CRUD)
+- Notifications are scheduled for reminders
 
 ---
 
-## 3. Gestion de l’authentification Firebase
+## 2. Dependencies & Configuration
 
-- **Connexion** :
+- `firebase_auth`: Authentication
+- `cloud_firestore`: Database
+- `flutter_local_notifications`: Notifications
+- `speech_to_text`: Voice input
+- `intl`: Date/time formats
+
+**Firebase Configuration:**
+- Place `google-services.json` in `android/app/`
+- Verify the package name in Firebase Console
+- Enable Email/Password in Auth
+
+---
+
+## 3. Firebase Authentication Management
+
+- **Login:**
   - `FirebaseAuth.instance.signInWithEmailAndPassword(email, password)`
-- **Inscription** :
+- **Registration:**
   - `FirebaseAuth.instance.createUserWithEmailAndPassword(email, password)`
-  - Ajout des infos utilisateur dans Firestore (`utilisateur/{uid}`)
-- **Déconnexion** :
+  - Add user info to Firestore (`user/{uid}`)
+- **Logout:**
   - `FirebaseAuth.instance.signOut()`
-- **Réinitialisation du mot de passe** :
+- **Password Reset:**
   - `FirebaseAuth.instance.sendPasswordResetEmail(email: userEmail)`
-  - Lien envoyé par email, pas de code à saisir dans l’app
+  - Link sent by email, no code to enter in the app
 
 ---
 
-## 4. Gestion des utilisateurs (Firestore)
+## 4. User Management (Firestore)
 
-- Collection : `utilisateur`
-- Document : UID Firebase
-- Champs : `nom`, `email`, etc.
-- Accès :
-  - Récupération : `FirebaseFirestore.instance.collection('utilisateur').doc(uid).get()`
-  - Mise à jour : `.update({...})`
-
----
-
-## 5. Gestion des tâches
-
-- Collection : `taches`
-- Champs : `titre`, `description`, `categorie`, `date_debut`, `heure_debut`, `date_fin`, `heure_fin`, `statut`
-- CRUD :
-  - Création : `.add({...})`
-  - Lecture : `.snapshots()` ou `.get()`
-  - Mise à jour : `.doc(id).update({...})`
-  - Suppression : `.doc(id).delete()`
-- Statuts : `Non débutée`, `En cours`, `Terminée`
+- Collection: `user`
+- Document: Firebase UID
+- Fields: `name`, `email`, etc.
+- Access:
+  - Retrieval: `FirebaseFirestore.instance.collection('user').doc(uid).get()`
+  - Update: `.update({...})`
 
 ---
 
-## 6. Gestion des réunions
+## 5. Task Management
 
-- Collection : `reunions`
-- Champs : `titre`, `description`, `lien_reunion`, `date`, `heure_debut`, `heure_fin`
-- CRUD identique aux tâches
-- Lien ou lieu : champ `lien_reunion` (URL ou adresse)
+- Collection: `tasks`
+- Fields: `title`, `description`, `category`, `start_date`, `start_time`, `end_date`, `end_time`, `status`
+- CRUD:
+  - Creation: `.add({...})`
+  - Read: `.snapshots()` or `.get()`
+  - Update: `.doc(id).update({...})`
+  - Deletion: `.doc(id).delete()`
+- Status: `Not started`, `In progress`, `Completed`
 
 ---
 
-## 7. Notifications locales
+## 6. Meeting Management
 
-- Utilise `flutter_local_notifications`
-- Planification de notifications pour rappels de tâches/réunions
-- Fichier principal : `notification_helper.dart`
-- Exemple :
+- Collection: `meetings`
+- Fields: `title`, `description`, `meeting_link`, `date`, `start_time`, `end_time`
+- CRUD identical to tasks
+- Link or location: `meeting_link` field (URL or address)
+
+---
+
+## 7. Local Notifications
+
+- Uses `flutter_local_notifications`
+- Scheduling notifications for task/meeting reminders
+- Main file: `notification_helper.dart`
+- Example:
 ```dart
 await NotificationHelper.showNotification(
-  title: 'Titre',
-  body: 'Corps de la notification',
+  title: 'Title',
+  body: 'Notification body',
   scheduledDate: DateTime(...),
 );
 ```
 
 ---
 
-## 8. Structure des fichiers
+## 8. File Structure
 
 - `lib/`
-  - `main.dart` : Bootstrap, navigation
-  - `connexion.dart` : Authentification
-  - `register.dart` : Inscription
-  - `compte.dart` : Compte utilisateur
-  - `tache.dart` / `reunion.dart` : CRUD tâches/réunions
-  - `modifier.dart` / `modifier_reunion.dart` : Édition
-  - `detaille.dart` : Détail tâche/réunion
-  - `notifications.dart` : Affichage notifications
-  - `notification_helper.dart` : Logiciel notifications
+  - `main.dart`: Bootstrap, navigation
+  - `login.dart`: Authentication
+  - `register.dart`: Registration
+  - `account.dart`: User account
+  - `task.dart` / `meeting.dart`: CRUD tasks/meetings
+  - `edit.dart` / `edit_meeting.dart`: Editing
+  - `detail.dart`: Task/meeting details
+  - `notifications.dart`: Notification display
+  - `notification_helper.dart`: Notification helper
 
 ---
 
-## 9. Principaux Widgets/Screens
+## 9. Main Widgets/Screens
 
-- **Connexion/Register** : Formulaires, validation, navigation
-- **Compte** : Affichage infos, bouton reset password
-- **Tâches/Réunions** : Listes, détails, édition, suppression
-- **Détail** : Vue détaillée, actions rapides (modifier, statut)
-- **Ajout/Modification** : Formulaires avec sélecteurs date/heure, saisie vocale
+- **Login/Register:** Forms, validation, navigation
+- **Account:** User info display, reset password button
+- **Tasks/Meetings:** Lists, details, editing, deletion
+- **Detail:** Detailed view, quick actions (edit, status)
+- **Add/Edit:** Forms with date/time pickers, voice input
 
 ---
 
-## 10. Bonnes pratiques & sécurité
+## 10. Best Practices & Security
 
-- **Jamais stocker de mot de passe en clair**
-- **Utiliser les UID Firebase comme clé primaire pour les utilisateurs**
-- **Vérifier la validité des emails avant envoi de reset**
-- **UI : privilégier le contraste (titres/textes en blanc sur fond violet)**
-- **Utiliser des try/catch pour toutes opérations Firestore/Firebase**
+- **Never store passwords in plain text**
+- **Use Firebase UIDs as primary keys for users**
+- **Verify email validity before sending reset**
+- **UI: prioritize contrast (white text on purple background)**
+- **Use try/catch for all Firestore/Firebase operations**
 
 ---
 
 ## Contact
-Pour toute question technique, contacter Yahya BAHLOUL.
+For any technical questions, contact Yahya BAHLOUL.
+bahloulyahya7@gmail.com

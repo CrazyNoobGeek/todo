@@ -75,7 +75,7 @@ class DetailleScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     if (meeting == null && task == null) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Détails')), 
+        appBar: AppBar(title: const Text('Détails'), style: TextStyle(color: Colors.white)), 
         body: const Center(child: Text('Aucune donnée à afficher.')),
       );
     }
