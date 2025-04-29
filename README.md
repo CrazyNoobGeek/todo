@@ -10,7 +10,7 @@ To install and run this project, you need the following environment:
 - **Dart SDK:** Included with Flutter (no separate installation needed)
 - **Android Studio** (or VS Code with Flutter extension) for development and Android emulation
 - **Android SDK:** Version 33 (Android 13) or higher recommended
-- **Java Development Kit (JDK):** Version 11 or higher
+- **Java Development Kit (JDK):** Version 11 or higher (JDK 17 recommended)
 - **Firebase account:** Access to Firebase Console to configure authentication and Firestore
 - **Internet connection:** Required for dependency installation and Firebase access
 
